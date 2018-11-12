@@ -18,6 +18,8 @@ public class Cliente {
     public static final int JANELA = 4;
     public static final int TIMEOUT = 500;
 
+    
+    public String caminhoLauro = "C:\\Users\\Lauro Costa\\Documents\\NetBeansProjects\\Go-Back-N\\GoBackN\\src\\arquivo\\teste.txt";
     public String caminho = "/home/jose/NetBeansProjects/ClienteTCP1/Lauro/src/arquivo/teste.txt";
     private DatagramSocket socketCliente;
     private byte[] resposta = new byte[200];
@@ -49,7 +51,7 @@ public class Cliente {
 
     public byte[] getBytesArquivo() throws FileNotFoundException, IOException {
 
-        File file = new File(this.caminho);
+        File file = new File(this.caminhoLauro);
         FileInputStream fistream = new FileInputStream(file);
         this.arquivo = new byte[(int) file.length()];
         fistream.read(this.arquivo);

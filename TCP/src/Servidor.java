@@ -132,12 +132,14 @@ public class Servidor implements Runnable {
 
     public void salvarArquivo(String caminho) {
 
+        String caminhoLauro = "C:\\Users\\Lauro Costa\\Documents\\NetBeansProjects\\Go-Back-N\\GoBackN\\src\\arquivo\\";
+
         caminho =  "/home/jose/NetBeansProjects/ClienteTCP1/Lauro/src/arquivo/teste.txt";
         byte[] arquivo = new byte[this.received.size() * 512];
 
         System.out.println(arquivo.length);
 
-        String nome = caminho + "nomeArquivo" + ".txt";
+        String nome = caminhoLauro + "nomeArquivo" + ".txt";
         System.out.println(nome);
         File SalvaNoDiretorio = new File(nome);
         
