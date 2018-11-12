@@ -29,6 +29,7 @@ public class Cliente {
     public int esperaAck = 12345;
     private int ultimoPacote;
     private int count=0;
+    public int fim;
     public Cliente() throws IOException {
 
         try {
@@ -37,7 +38,9 @@ public class Cliente {
             this.arquivo = getBytesArquivo();
             this.ultimoPacote = (int) Math.ceil((double) arquivo.length / TAMANHO_PAYLOAD);
             this.ipServidor = InetAddress.getByName("localhost");
+            this.fim=this.ultimoPacote;
             this.ultimoPacote=ultimoPacote*512+12345;
+            
 
         } catch (SocketException ex) {
             System.out.println("Erro ao criar o socket");
@@ -57,7 +60,7 @@ public class Cliente {
 
     public void enviaJanela() throws IOException  {
         
-         count=0;
+         
         //envia ate o tamanho da janela
         while (seqPacote - esperaAck < JANELA && seqPacote < ultimoPacote) {
 
@@ -67,14 +70,14 @@ public class Cliente {
            
             pacoteBytes = Arrays.copyOfRange(arquivo, count * TAMANHO_PAYLOAD, count * TAMANHO_PAYLOAD + TAMANHO_PAYLOAD);
 
-            PacoteDados pacoteDados = new PacoteDados(seqPacote, pacoteBytes, (seqPacote == ultimoPacote - 1) ? true : false);
+            PacoteDados pacoteDados = new PacoteDados(seqPacote, pacoteBytes, (seqPacote == ultimoPacote-512 ) ? true : false);
 
             byte[] sendData = Serializer.toBytes(pacoteDados);
             DatagramPacket packet = new DatagramPacket(sendData, sendData.length, ipServidor, 9876);
-
+          
             System.out.println("Envio de pacote com número de sequência " + seqPacote + " e tamanho " + sendData.length + " bytes");
             pacotesEnviados.add(pacoteDados);
-
+            
             if (Math.random() > PROBABILIDADE) {
                 socketCliente.send(packet);
             } else {
@@ -82,6 +85,7 @@ public class Cliente {
             }
             seqPacote+=512;
             count++;
+          
         }
     }
 
@@ -98,7 +102,7 @@ public class Cliente {
                 PacoteAck ackObject = (PacoteAck) Serializer.toObject(ack.getData());
                 System.out.println("Recebido ack do pacote " + ackObject.getSeqNum());
 
-                if (ackObject.getSeqNum() == ultimoPacote) {
+                if (ackObject.getSeqNum() == (ultimoPacote)) {
                     break;
                 }
 
