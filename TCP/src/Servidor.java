@@ -13,23 +13,24 @@ import java.util.logging.Logger;
 
 public class Servidor implements Runnable {
 
-    public static final int TAMANHO_CABECALHO = 512;
-    public static final int TAMANHO_PAYLOAD = 200;
-    public static final double PROBABILIDADE = 0.1;
-    public static final int PORTA_SERVIDOR = 9876;
+    public final int TAMANHO_CABECALHO = 512;
+    public final int TAMANHO_PAYLOAD = 512;
+    public final double TAXA_PERDA = 0.0;
+    public final int PORTA_SERVIDOR = 9876;
 
     private DatagramSocket socketServidor;
     private byte[] pacoteRecebido;
     private InetAddress ipLocal;
     private Thread t1;
+    int esperaPor;
+    int seqNum = 4321;
 
-    ArrayList<byte[]> received = new ArrayList<>();
-    int esperaPor = 12345;
+    ArrayList<byte[]> partesArquivo = new ArrayList<>();
 
     public Servidor() throws UnknownHostException {
 
         try {
-            socketServidor = new DatagramSocket(Servidor.PORTA_SERVIDOR);
+            socketServidor = new DatagramSocket(this.PORTA_SERVIDOR);
             pacoteRecebido = new byte[TAMANHO_CABECALHO + TAMANHO_PAYLOAD];
             ipLocal = InetAddress.getLocalHost();
             t1 = new Thread(this);
@@ -42,49 +43,72 @@ public class Servidor implements Runnable {
 
     public void esperarPacotes() throws IOException, ClassNotFoundException {
 
-        System.out.println("Esperando pelo pacote");
-
         boolean end = false;
 
         while (!end) {
 
             byte[] pacoteRecebido = this.receberPacote();
-            PacoteDados pacote = (PacoteDados) Serializer.toObject(pacoteRecebido);
+            Pacote pacote = (Pacote) Serializer.toObject(pacoteRecebido);
             //pacote.setSeqNum(esperaPor);
 
-            System.out.println("Pacote com número de sequência " + pacote.getSeqNum() + " recebido (último: " + pacote.isFyn() + " )");
+            System.out.println(pacote.toString() + "\n<------------------------------------");
+
+            if (pacote.isSyn()) {
+
+                Pacote synack = new Pacote(pacote.getSeqNum() + 1);
+                synack.setSeqNum(this.seqNum);
+                synack.setAck(true);
+                synack.setSyn(true);
+                synack.setConnectionID(1);
+                this.esperaPor = synack.getAckNum();
+
+                byte[] ackBytes = Serializer.toBytes(synack);
+
+                if (Math.random() > TAXA_PERDA) {
+                    this.enviarPacote(ackBytes, 5000);
+                    System.out.println(synack.toString() + "\n------------------------------------>");
+                    break;
+
+                } else {
+                    System.out.println("[X] Ack perdido com o número de sequência" + synack.getSeqNum());
+                }
+
+            }
 
             if (pacote.getSeqNum() == esperaPor && pacote.isFyn()) {
 
-                //se for o ultimo pacote
-                esperaPor+=512;
-                received.add(pacote.getPayload());
-                System.out.println("Último pacote recebido");
+                //se for o ultimo pacot
+                esperaPor += 512;
+                partesArquivo.add(pacote.getPayload());
+                this.salvarArquivo("");
                 end = true;
 
+                
             } else if (pacote.getSeqNum() == esperaPor) {
 
-                esperaPor+=512;
-                received.add(pacote.getPayload());
-                System.out.println("pacote armazenado em buffer");
+                esperaPor += 512;
+                partesArquivo.add(pacote.getPayload());
 
             } else {
                 //se nao for o pacote que que estava esperando
-                System.out.println("################################Pacote descartado (fora de ordem)");
-               
+                System.out.println("Pacote descartado (fora de ordem)");
+
             }
 
             // enviar ack
-            PacoteAck ackObject = new PacoteAck(esperaPor);
-            byte[] ackBytes = Serializer.toBytes(ackObject);
+            
+            Pacote pacoteAck = new Pacote(pacote.getSeqNum() + 512);
+            pacoteAck.setConnectionID(pacote.getConnectionID());
+            pacoteAck.setAck(true);
+            
+            byte[] ackBytes = Serializer.toBytes(pacoteAck);
 
-            if (Math.random() > PROBABILIDADE) {
+            if (Math.random() > TAXA_PERDA) {
                 this.enviarPacote(ackBytes, 5000);
+                System.out.println("  "+pacoteAck.toString() + "\n------------------------------------>");
             } else {
-                System.out.println("[X] Ack perdido com o número de sequência" + ackObject.getSeqNum());
+                System.out.println("[X] Ack perdido com o número de sequência" + pacoteAck.getSeqNum());
             }
-
-            System.out.println("Enviando ACK para seq " + esperaPor + " com " + ackBytes.length + " bytes");
 
         }
     }
@@ -110,47 +134,33 @@ public class Servidor implements Runnable {
             byte[] pkg = pacote.getData();
 
             return pkg;
+       
         } catch (IOException ex) {
             System.out.println("Não foi possivel receber o pacote");
         }
         return null;
     }
 
-    @Override
-    public void run() {
-        try {
-          
-            this.esperarPacotes();
+    private void salvarArquivo(String caminho) {
 
-        } catch (IOException ex) {
-            Logger.getLogger(Servidor.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (ClassNotFoundException ex) {
-            Logger.getLogger(Servidor.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        this.salvarArquivo("");
-    }
+        String caminhoLauro = "src\\arquivo\\";
 
-    public void salvarArquivo(String caminho) {
-
-        String caminhoLauro = "C:\\Users\\Lauro Costa\\Documents\\NetBeansProjects\\Go-Back-N\\GoBackN\\src\\arquivo\\";
-
-        caminho =  "/home/jose/NetBeansProjects/ClienteTCP1/Lauro/src/arquivo/teste.txt";
-        byte[] arquivo = new byte[this.received.size() * 512];
+        caminho = "/home/jose/NetBeansProjects/ClienteTCP1/Lauro/src/arquivo/teste.txt";
+        byte[] arquivo = new byte[this.partesArquivo.size() * 512];
 
         System.out.println(arquivo.length);
 
-        String nome = caminho + "nomeArquivo" + ".txt";
+        String nome = caminhoLauro + "nomeArquivo" + ".txt";
         System.out.println(nome);
         File SalvaNoDiretorio = new File(nome);
-        
-        
+
         int i = 0;
         //posicao vai andar de acordo com cada byte que vai ser colocado no vetor de byte completo
         int posicao = 0;
-       
-        while (i < received.size()) {
-            for (int j = 0; j < received.get(i).length; j++) {
-                arquivo[posicao] = received.get(i)[j];
+
+        while (i < partesArquivo.size()) {
+            for (int j = 0; j < partesArquivo.get(i).length; j++) {
+                arquivo[posicao] = partesArquivo.get(i)[j];
                 posicao++;
             }
             i++;
@@ -163,8 +173,23 @@ public class Servidor implements Runnable {
 
     }
 
+    @Override
+    public void run() {
+        while (true) {
+            try {
 
-public static void main(String[] args) throws Exception {
+                this.esperarPacotes();
+
+            } catch (IOException ex) {
+                System.out.println("Não foi possivel receber o pacote...");
+            } catch (ClassNotFoundException ex) {
+                System.out.println("Arquivo não é o esperado");
+            }
+        }
+
+    }
+
+    public static void main(String[] args) throws Exception {
 
         Servidor server = new Servidor();
 
