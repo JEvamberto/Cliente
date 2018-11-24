@@ -150,7 +150,7 @@ public class Servidor implements Runnable {
 
         System.out.println(arquivo.length);
 
-        String nome = caminhoLauro + "nomeArquivo" + ".txt";
+        String nome = caminho + "nomeArquivo" + ".txt";
         System.out.println(nome);
         File SalvaNoDiretorio = new File(nome);
 

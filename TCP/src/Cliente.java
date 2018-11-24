@@ -14,7 +14,7 @@ import java.util.Arrays;
 public class Cliente {
 
     public static final int TAMANHO_PAYLOAD = 512;
-    public static final double TAXA_PERDA = 0.0;
+    public static final double TAXA_PERDA = 0.9;
     public static final int JANELA = 4;
     public static final int TIMEOUT = 500;
 
@@ -50,7 +50,7 @@ public class Cliente {
 
     public byte[] getBytesArquivo() throws FileNotFoundException, IOException {
 
-        File file = new File(this.caminhoLauro);
+        File file = new File(this.caminho);
         FileInputStream fistream = new FileInputStream(file);
         this.arquivo = new byte[(int) file.length()];
         fistream.read(this.arquivo);
@@ -61,7 +61,6 @@ public class Cliente {
 
     public void enviaJanela() throws IOException {
 
-     
         //envia ate o tamanho da janela
         while (seqPacote - esperaAck < JANELA && seqPacote < ultimoPacote) {
 
@@ -71,8 +70,7 @@ public class Cliente {
 
             Pacote pacoteDados = new Pacote(seqPacote, pacoteBytes, (seqPacote == (ultimoPacote + 1) - 512) ? true : false);
             pacoteDados.setConnectionID(this.connectionID);
-            
-            
+
             byte[] sendData = Serializer.toBytes(pacoteDados);
             DatagramPacket packet = new DatagramPacket(sendData, sendData.length, ipServidor, 9876);
 
@@ -106,7 +104,6 @@ public class Cliente {
 
                 System.out.println(pacoteAck.toString() + "\n<------------------------------------");
 
-              
                 if (pacoteAck.getAckNum() == ultimoPacote + 1) {
                     break;
                 }
@@ -114,30 +111,48 @@ public class Cliente {
                 esperaAck = Math.max(esperaAck, pacoteAck.getAckNum());
 
             } catch (SocketTimeoutException e) {
+                //aqui
+                if (pacotesEnviados.size() - 1 >= 3) {
+                    for (int i = (this.JANELA - 1); i >= 0; i--) {
 
-           
-                for (int i = esperaAck; i < seqPacote; i = i + 512) {
+                        byte[] sendData = Serializer.toBytes(pacotesEnviados.get(((this.pacotesEnviados.size() - 1) - i)));
+                        DatagramPacket packet = new DatagramPacket(sendData, sendData.length, ipServidor, 9876);
 
-                    byte[] sendData = Serializer.toBytes(pacotesEnviados.get(((this.pacotesEnviados.size()-1)-i)  ));
-                    DatagramPacket packet = new DatagramPacket(sendData, sendData.length, ipServidor, 9876);
+                        if (Math.random() > TAXA_PERDA) {
+                            socketCliente.send(packet);
+                        } else {
+                            System.out.println("[X] Pacote perdido com número de sequência" + pacotesEnviados.get(i).getSeqNum());
 
-                    if (Math.random() > TAXA_PERDA) {
-                        socketCliente.send(packet);
-                    } else {
-                        System.out.println("[X] Pacote perdido com número de sequência" + pacotesEnviados.get(i).getSeqNum());
+                        }
+                        System.out.println("Pacote de reemissão com número de sequência" + pacotesEnviados.get(i).getSeqNum() + " e tamanho " + sendData.length + " bytes");
 
                     }
-                    System.out.println("Pacote de reemissão com número de sequência" + pacotesEnviados.get(i).getSeqNum() + " and size " + sendData.length + " bytes");
 
-                    count++;
+                } else {
+                    //aqui
+                    for (int i = 0; i < pacotesEnviados.size(); i++) {
+
+                        byte[] sendData = Serializer.toBytes(pacotesEnviados.get(i));
+                        DatagramPacket packet = new DatagramPacket(sendData, sendData.length, ipServidor, 9876);
+
+                        if (Math.random() > TAXA_PERDA) {
+                            socketCliente.send(packet);
+                        } else {
+                            System.out.println("[X] Pacote perdido com número de sequência" + pacotesEnviados.get(i).getSeqNum());
+
+                        }
+                        System.out.println("Pacote de reemissão com número de sequência" + pacotesEnviados.get(i).getSeqNum() + " e tamanho " + sendData.length + " bytes");
+
+                    }
+
                 }
+
             }
-         
+
         }
         System.out.println("Arquivo transferido");
     }
-    
-    
+
     private void enviarPacote(byte[] pkg, int portaServidor) {
 
         try {
@@ -155,16 +170,15 @@ public class Cliente {
         try {
 
             byte[] pacoteRecebido = new byte[1024];
-            
+
             DatagramPacket pacote = new DatagramPacket(pacoteRecebido, pacoteRecebido.length);
-            
+
             socketCliente.setSoTimeout(TIMEOUT);
             socketCliente.receive(pacote);
-            
+
             byte[] pkg = pacote.getData();
             return (Pacote) Serializer.toObject(pkg);
-       
-            
+
         } catch (ClassNotFoundException ex) {
             System.out.println("Não é o arquivo esperado...");
         } catch (SocketTimeoutException e) {
@@ -174,12 +188,11 @@ public class Cliente {
         }
         return null;
     }
-    
-    
-    public void enviarPacoteSyn(){
-        
+
+    public void enviarPacoteSyn() {
+
         try {
-            
+
             Pacote pacoteSyn = new Pacote();
             pacoteSyn.setSyn(true);
             pacoteSyn.setSeqNum(this.seqPacote);
@@ -188,21 +201,21 @@ public class Cliente {
             System.out.println(pacoteSyn.toString() + "\n------------------------------------>");
             Pacote resposta = receberPacote();
 
-            if(resposta != null){
-                
+            if (resposta != null) {
+
                 System.out.println(resposta.toString() + "\n<------------------------------------");
                 this.seqPacote = resposta.getAckNum();
                 this.esperaAck = resposta.getAckNum();
                 this.connectionID = resposta.getConnectionID();
-    
+
             }
-            
+
         } catch (IOException ex) {
             System.out.println("Não foi possivel enviar o pacote");
-        }      
-  
+        }
+
     }
-            
+
     public static void main(String[] args) throws Exception {
 
         Cliente c = new Cliente();
