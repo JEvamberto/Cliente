@@ -15,7 +15,7 @@ public class Servidor implements Runnable {
 
     public static final int TAMANHO_CABECALHO = 512;
     public static final int TAMANHO_PAYLOAD = 200;
-    public static final double PROBABILIDADE = 0.0;
+    public static final double PROBABILIDADE = 0.1;
     public static final int PORTA_SERVIDOR = 9876;
 
     private DatagramSocket socketServidor;
@@ -139,7 +139,7 @@ public class Servidor implements Runnable {
 
         System.out.println(arquivo.length);
 
-        String nome = caminhoLauro + "nomeArquivo" + ".txt";
+        String nome = caminho + "nomeArquivo" + ".txt";
         System.out.println(nome);
         File SalvaNoDiretorio = new File(nome);
         

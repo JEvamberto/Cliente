@@ -14,7 +14,7 @@ import java.util.Arrays;
 public class Cliente {
 
     public static final int TAMANHO_PAYLOAD = 512;
-    public static final double PROBABILIDADE = 0.0;
+    public static final double PROBABILIDADE = 0.1;
     public static final int JANELA = 4;
     public static final int TIMEOUT = 500;
 
@@ -51,7 +51,7 @@ public class Cliente {
 
     public byte[] getBytesArquivo() throws FileNotFoundException, IOException {
 
-        File file = new File(this.caminhoLauro);
+        File file = new File(this.caminho);
         FileInputStream fistream = new FileInputStream(file);
         this.arquivo = new byte[(int) file.length()];
         fistream.read(this.arquivo);
@@ -113,13 +113,13 @@ public class Cliente {
             } catch (SocketTimeoutException e) {
                 
                 
-                for (int i = 0; i < this.JANELA; i++) {
+               /* for (int i = 0; i < this.JANELA; i++) {
                     count--;
-                }
+                }*/
 
-                for (int i = esperaAck; i < seqPacote; i=i+512) {
+                for (int i = (this.JANELA-1); i >= 0; i--) {
 
-                    byte[] sendData = Serializer.toBytes(pacotesEnviados.get(count));
+                    byte[] sendData = Serializer.toBytes(pacotesEnviados.get(((this.pacotesEnviados.size()-1)-i)  ));
                     DatagramPacket packet = new DatagramPacket(sendData, sendData.length, ipServidor, 9876);
 
                     if (Math.random() > PROBABILIDADE) {
@@ -129,7 +129,7 @@ public class Cliente {
 
                     }
                     System.out.println("Pacote de reemissão com número de sequência" + pacotesEnviados.get(i).getSeqNum() + " and size " + sendData.length + " bytes");
-                count++;
+                
                 }
             }
         }
