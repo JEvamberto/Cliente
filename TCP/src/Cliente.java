@@ -14,7 +14,7 @@ import java.util.Arrays;
 public class Cliente {
 
     public static final int TAMANHO_PAYLOAD = 512;
-    public static final double TAXA_PERDA = 0.9;
+    public static final double TAXA_PERDA = 0.0;
     public static final int JANELA = 4;
     public static final int TIMEOUT = 500;
 
@@ -36,7 +36,7 @@ public class Cliente {
 
         try {
 
-            this.socketCliente = new DatagramSocket(5000);
+            this.socketCliente = new DatagramSocket();
             this.arquivo = getBytesArquivo();
             this.ultimoPacote = (int) Math.ceil((double) arquivo.length / TAMANHO_PAYLOAD);
             this.ipServidor = InetAddress.getByName("localhost");
@@ -50,7 +50,7 @@ public class Cliente {
 
     public byte[] getBytesArquivo() throws FileNotFoundException, IOException {
 
-        File file = new File(this.caminho);
+        File file = new File(this.caminhoLauro);
         FileInputStream fistream = new FileInputStream(file);
         this.arquivo = new byte[(int) file.length()];
         fistream.read(this.arquivo);
@@ -70,6 +70,7 @@ public class Cliente {
 
             Pacote pacoteDados = new Pacote(seqPacote, pacoteBytes, (seqPacote == (ultimoPacote + 1) - 512) ? true : false);
             pacoteDados.setConnectionID(this.connectionID);
+           
 
             byte[] sendData = Serializer.toBytes(pacoteDados);
             DatagramPacket packet = new DatagramPacket(sendData, sendData.length, ipServidor, 9876);
@@ -79,11 +80,9 @@ public class Cliente {
 
             if (Math.random() > TAXA_PERDA) {
                 socketCliente.send(packet);
-
             } else {
                 System.out.println("[X] Pacote perdido com número de sequência" + seqPacote);
             }
-
             seqPacote += 512;
             count++;
         }
@@ -142,13 +141,9 @@ public class Cliente {
 
                         }
                         System.out.println("Pacote de reemissão com número de sequência" + pacotesEnviados.get(i).getSeqNum() + " e tamanho " + sendData.length + " bytes");
-
                     }
-
                 }
-
             }
-
         }
         System.out.println("Arquivo transferido");
     }
@@ -166,7 +161,7 @@ public class Cliente {
     }
 
     private Pacote receberPacote() {
-
+        
         try {
 
             byte[] pacoteRecebido = new byte[1024];

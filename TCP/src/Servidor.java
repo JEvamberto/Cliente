@@ -13,6 +13,8 @@ import java.util.logging.Logger;
 
 public class Servidor implements Runnable {
 
+    
+    private static int numID = 1;
     public final int TAMANHO_CABECALHO = 512;
     public final int TAMANHO_PAYLOAD = 512;
     public final double TAXA_PERDA = 0.0;
@@ -24,6 +26,7 @@ public class Servidor implements Runnable {
     private Thread t1;
     int esperaPor;
     int seqNum = 4321;
+    int portaCliente;
 
     ArrayList<byte[]> partesArquivo = new ArrayList<>();
 
@@ -50,7 +53,7 @@ public class Servidor implements Runnable {
             byte[] pacoteRecebido = this.receberPacote();
             Pacote pacote = (Pacote) Serializer.toObject(pacoteRecebido);
             //pacote.setSeqNum(esperaPor);
-
+  
             System.out.println(pacote.toString() + "\n<------------------------------------");
 
             if (pacote.isSyn()) {
@@ -59,13 +62,13 @@ public class Servidor implements Runnable {
                 synack.setSeqNum(this.seqNum);
                 synack.setAck(true);
                 synack.setSyn(true);
-                synack.setConnectionID(1);
+                synack.setConnectionID(numID ++);
                 this.esperaPor = synack.getAckNum();
 
                 byte[] ackBytes = Serializer.toBytes(synack);
 
                 if (Math.random() > TAXA_PERDA) {
-                    this.enviarPacote(ackBytes, 5000);
+                    this.enviarPacote(ackBytes, this.portaCliente);
                     System.out.println(synack.toString() + "\n------------------------------------>");
                     break;
 
@@ -74,7 +77,7 @@ public class Servidor implements Runnable {
                 }
 
             }
-
+           
             if (pacote.getSeqNum() == esperaPor && pacote.isFyn()) {
 
                 //se for o ultimo pacot
@@ -96,15 +99,21 @@ public class Servidor implements Runnable {
             }
 
             // enviar ack
-            
             Pacote pacoteAck = new Pacote(pacote.getSeqNum() + 512);
+            if(pacote.isAck()){
+                
+                System.out.println("fazer handShack aqui");
+                this.seqNum = pacote.getAckNum();
+            }
+          
+            pacoteAck.setSeqNum(this.seqNum);
             pacoteAck.setConnectionID(pacote.getConnectionID());
             pacoteAck.setAck(true);
             
             byte[] ackBytes = Serializer.toBytes(pacoteAck);
 
             if (Math.random() > TAXA_PERDA) {
-                this.enviarPacote(ackBytes, 5000);
+                this.enviarPacote(ackBytes, this.portaCliente);
                 System.out.println("  "+pacoteAck.toString() + "\n------------------------------------>");
             } else {
                 System.out.println("[X] Ack perdido com o número de sequência" + pacoteAck.getSeqNum());
@@ -131,6 +140,7 @@ public class Servidor implements Runnable {
 
             DatagramPacket pacote = new DatagramPacket(pacoteRecebido, pacoteRecebido.length);
             socketServidor.receive(pacote);
+            this.portaCliente = pacote.getPort();
             byte[] pkg = pacote.getData();
 
             return pkg;
@@ -150,7 +160,7 @@ public class Servidor implements Runnable {
 
         System.out.println(arquivo.length);
 
-        String nome = caminho + "nomeArquivo" + ".txt";
+        String nome = caminhoLauro + "save-"+ this.portaCliente + ".txt";
         System.out.println(nome);
         File SalvaNoDiretorio = new File(nome);
 
