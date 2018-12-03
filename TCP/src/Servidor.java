@@ -13,12 +13,11 @@ import java.util.logging.Logger;
 
 public class Servidor implements Runnable {
 
-    
     private static int numID = 1;
     public final int TAMANHO_CABECALHO = 512;
     public final int TAMANHO_PAYLOAD = 512;
     public final double TAXA_PERDA = 0.0;
-    public final int PORTA_SERVIDOR = 9876;
+    public static int PORTA_SERVIDOR = 12355;
 
     private DatagramSocket socketServidor;
     private byte[] pacoteRecebido;
@@ -33,7 +32,8 @@ public class Servidor implements Runnable {
     public Servidor() throws UnknownHostException {
 
         try {
-            socketServidor = new DatagramSocket(this.PORTA_SERVIDOR);
+            //ele vai ter que receber um syn na porta 6669, depois vai passar para Classe tratar
+            socketServidor = new DatagramSocket(PORTA_SERVIDOR++);
             pacoteRecebido = new byte[TAMANHO_CABECALHO + TAMANHO_PAYLOAD];
             ipLocal = InetAddress.getLocalHost();
             t1 = new Thread(this);
@@ -42,6 +42,38 @@ public class Servidor implements Runnable {
         } catch (SocketException ex) {
             Logger.getLogger(Servidor.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+
+    public Servidor(Pacote pacote, int port) throws IOException {
+        
+        
+        this.portaCliente = port;
+        socketServidor = new DatagramSocket(PORTA_SERVIDOR++);
+        pacoteRecebido = new byte[TAMANHO_CABECALHO + TAMANHO_PAYLOAD];
+        ipLocal = InetAddress.getLocalHost();
+
+        Pacote synack = new Pacote(pacote.getSeqNum() + 1);
+        synack.setSeqNum(this.seqNum);
+        synack.setAck(true);
+        synack.setSyn(true);
+        synack.setConnectionID(numID++);
+        this.esperaPor = synack.getAckNum();
+
+        byte[] ackBytes = Serializer.toBytes(synack);
+
+        
+        
+        if (Math.random() > TAXA_PERDA) {
+            this.enviarPacote(ackBytes, this.portaCliente);
+            System.out.println(synack.toString() + "\n------------------------------------>");
+
+        } else {
+            System.out.println("[X] Ack perdido com o número de sequência" + synack.getSeqNum());
+        }
+
+        t1 = new Thread(this);
+        t1.start();
+
     }
 
     public void esperarPacotes() throws IOException, ClassNotFoundException {
@@ -53,7 +85,7 @@ public class Servidor implements Runnable {
             byte[] pacoteRecebido = this.receberPacote();
             Pacote pacote = (Pacote) Serializer.toObject(pacoteRecebido);
             //pacote.setSeqNum(esperaPor);
-  
+
             System.out.println(pacote.toString() + "\n<------------------------------------");
 
             if (pacote.isSyn()) {
@@ -62,12 +94,13 @@ public class Servidor implements Runnable {
                 synack.setSeqNum(this.seqNum);
                 synack.setAck(true);
                 synack.setSyn(true);
-                synack.setConnectionID(numID ++);
+                synack.setConnectionID(numID++);
                 this.esperaPor = synack.getAckNum();
 
                 byte[] ackBytes = Serializer.toBytes(synack);
 
                 if (Math.random() > TAXA_PERDA) {
+                    
                     this.enviarPacote(ackBytes, this.portaCliente);
                     System.out.println(synack.toString() + "\n------------------------------------>");
                     break;
@@ -77,7 +110,7 @@ public class Servidor implements Runnable {
                 }
 
             }
-           
+
             if (pacote.getSeqNum() == esperaPor && pacote.isFyn()) {
 
                 //se for o ultimo pacot
@@ -86,7 +119,6 @@ public class Servidor implements Runnable {
                 this.salvarArquivo("");
                 end = true;
 
-                
             } else if (pacote.getSeqNum() == esperaPor) {
 
                 esperaPor += 512;
@@ -100,21 +132,21 @@ public class Servidor implements Runnable {
 
             // enviar ack
             Pacote pacoteAck = new Pacote(pacote.getSeqNum() + 512);
-            if(pacote.isAck()){
-                
+            if (pacote.isAck()) {
+
                 System.out.println("fazer handShack aqui");
                 this.seqNum = pacote.getAckNum();
             }
-          
+
             pacoteAck.setSeqNum(this.seqNum);
             pacoteAck.setConnectionID(pacote.getConnectionID());
             pacoteAck.setAck(true);
-            
+
             byte[] ackBytes = Serializer.toBytes(pacoteAck);
 
             if (Math.random() > TAXA_PERDA) {
                 this.enviarPacote(ackBytes, this.portaCliente);
-                System.out.println("  "+pacoteAck.toString() + "\n------------------------------------>");
+                System.out.println("  " + pacoteAck.toString() + "\n------------------------------------>");
             } else {
                 System.out.println("[X] Ack perdido com o número de sequência" + pacoteAck.getSeqNum());
             }
@@ -144,7 +176,7 @@ public class Servidor implements Runnable {
             byte[] pkg = pacote.getData();
 
             return pkg;
-       
+
         } catch (IOException ex) {
             System.out.println("Não foi possivel receber o pacote");
         }
@@ -155,12 +187,12 @@ public class Servidor implements Runnable {
 
         String caminhoLauro = "src\\arquivo\\";
 
-        caminho = "/home/jose/NetBeansProjects/ClienteTCP1/Lauro/src/arquivo/teste.txt";
+        caminho = "/home/jose/NetBeansProjects/ClienteTCP1/Lauro/src/arquivo/";
         byte[] arquivo = new byte[this.partesArquivo.size() * 512];
 
         System.out.println(arquivo.length);
 
-        String nome = caminhoLauro + "save-"+ this.portaCliente + ".txt";
+        String nome = caminho + "save-" + this.portaCliente + ".txt";
         System.out.println(nome);
         File SalvaNoDiretorio = new File(nome);
 
@@ -199,9 +231,11 @@ public class Servidor implements Runnable {
 
     }
 
-    public static void main(String[] args) throws Exception {
+   /* public static void main(String[] args) throws Exception {
 
         Servidor server = new Servidor();
 
-    }
+        DatagramSocket servidor = new DatagramSocket(6669);
+
+    }*/
 }

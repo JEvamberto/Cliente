@@ -110,7 +110,7 @@ public class Pacote implements Serializable {
     public String toString() {
        
         if(siglasChaves().equals("")){
-            return "      seq=" + this.getSeqNum() + ", ack=" + this.ackNum + ", id=" + this.connectionID ;
+            return "seq=" + this.getSeqNum() + ", ack=" + this.ackNum + ", id=" + this.connectionID ;
        
         }else{
             
