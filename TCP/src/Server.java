@@ -6,16 +6,6 @@ import java.net.SocketException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- *
- * @author jose
- */
 public class Server {
     
     public static void main(String[] args) {
@@ -28,7 +18,7 @@ public class Server {
             
             while(true){
                System.out.println("Estou esperando clientes");
-            socket.receive(pkg);
+               socket.receive(pkg);
                Pacote pacote = (Pacote)Serializer.toObject(pkg.getData());
                
                 if (pacote.isSyn()) {
@@ -38,10 +28,6 @@ public class Server {
                 }
             
             }
-            
-            
-            
-            
             
         } catch (SocketException ex) {
             Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);

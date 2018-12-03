@@ -132,9 +132,12 @@ public class Servidor implements Runnable {
 
             // enviar ack
             Pacote pacoteAck = new Pacote(pacote.getSeqNum() + 512);
-            if (pacote.isAck()) {
-
-                System.out.println("fazer handShack aqui");
+            if(pacote.isAck()){
+                
+                System.out.println("_____________________________________");
+                System.out.println("Cliente ID: "+ pacote.getConnectionID() + " conectado na porta: "+this.portaCliente);
+                System.out.println("_____________________________________");
+                
                 this.seqNum = pacote.getAckNum();
             }
 
@@ -192,7 +195,7 @@ public class Servidor implements Runnable {
 
         System.out.println(arquivo.length);
 
-        String nome = caminho + "save-" + this.portaCliente + ".txt";
+        String nome = caminhoLauro + "save-" + this.portaCliente + ".txt";
         System.out.println(nome);
         File SalvaNoDiretorio = new File(nome);
 

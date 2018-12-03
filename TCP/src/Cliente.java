@@ -32,12 +32,13 @@ public class Cliente {
     private int count = 0;
     private int connectionID;
     private int portaServidor=6669;
+    private Pacote temp;
 
-    public Cliente(int porta) throws IOException {
+    public Cliente() throws IOException {
 
         try {
 
-            this.socketCliente = new DatagramSocket(porta);
+            this.socketCliente = new DatagramSocket();
             this.arquivo = getBytesArquivo();
             this.ultimoPacote = (int) Math.ceil((double) arquivo.length / TAMANHO_PAYLOAD);
             this.ipServidor = InetAddress.getByName("localhost");
@@ -51,7 +52,7 @@ public class Cliente {
 
     public byte[] getBytesArquivo() throws FileNotFoundException, IOException {
 
-        File file = new File(this.caminho);
+        File file = new File(this.caminhoLauro);
         FileInputStream fistream = new FileInputStream(file);
         this.arquivo = new byte[(int) file.length()];
         fistream.read(this.arquivo);
@@ -72,9 +73,15 @@ public class Cliente {
             Pacote pacoteDados = new Pacote(seqPacote, pacoteBytes, (seqPacote == (ultimoPacote + 1) - 512) ? true : false);
             pacoteDados.setConnectionID(this.connectionID);
            
-
+                    
+            if(this.temp != null){
+                pacoteDados.setAck(true);
+                pacoteDados.setAckNum(this.temp.getSeqNum() + 1);
+                this.temp = null;
+            }
+            
+            
             byte[] sendData = Serializer.toBytes(pacoteDados);
-            System.out.println("A porta do servido:"+portaServidor);
             DatagramPacket packet = new DatagramPacket(sendData, sendData.length, ipServidor, portaServidor);
 
             System.out.println(pacoteDados.toString() + "\n------------------------------------>");
@@ -198,11 +205,12 @@ public class Cliente {
             enviarPacote(pacote, this.portaServidor);
             System.out.println(pacoteSyn.toString() + "\n------------------------------------>");
             Pacote resposta = receberPacote();
-
+            this.temp = resposta;
+            
+            
             if (resposta != null) {
 
                 System.out.println(resposta.toString() + "\n<------------------------------------");
-                
                 this.seqPacote = resposta.getAckNum();
                 this.esperaAck = resposta.getAckNum();
                 this.connectionID = resposta.getConnectionID();
@@ -217,7 +225,7 @@ public class Cliente {
 
     public static void main(String[] args) throws Exception {
 
-        Cliente c = new Cliente(12344);
+        Cliente c = new Cliente();
         c.enviarPacoteSyn();
         c.transferirArquivo();
 
