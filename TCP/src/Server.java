@@ -7,28 +7,54 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Server {
+
+    private int porta;
+    private String caminho;
+    private DatagramSocket socket;
+    private byte[] dados;
+    private DatagramPacket pkg;
     
-    public static void main(String[] args) {
-        DatagramSocket socket;
-    
+
+    public Server(int porta, String caminho) {
+
         try {
-            byte dados[] = new byte[512+512];
-            socket = new DatagramSocket(6669);
-            DatagramPacket pkg = new DatagramPacket(dados, dados.length);
             
-            while(true){
-               System.out.println("Estou esperando clientes");
-               socket.receive(pkg);
-               Pacote pacote = (Pacote)Serializer.toObject(pkg.getData());
-               
+            this.dados = new byte[1024];
+            this.pkg = new DatagramPacket(dados, dados.length);
+            this.porta = porta;
+            this.caminho = caminho;
+            this.socket = new DatagramSocket(porta);
+       
+        } catch (SocketException ex) {
+            System.out.println("Não foi possivel abrir o aocket na porta "+ porta);
+        }
+
+    }
+
+    public static void main(String[] args) {
+        
+        String caminhoLauro = "src\\arquivo\\";
+        String caminho = "/home/jose/NetBeansProjects/ClienteTCP1/Lauro/src/arquivo/";
+        int portaServidor = 6669;
+        
+        Server server = new Server(portaServidor, caminhoLauro);
+        
+        try {
+        
+            while (true) {
+                
+                System.out.println("Estou esperando clientes");
+                server.socket.receive(server.pkg);
+                Pacote pacote = (Pacote) Serializer.toObject(server.pkg.getData());
+
                 if (pacote.isSyn()) {
-                    
-                    Servidor serverTrata = new Servidor(pacote,pkg.getPort());
-                    
+
+                    new Comunicacao(server.caminho, pacote, server.pkg.getPort());
+
                 }
-            
+
             }
-            
+
         } catch (SocketException ex) {
             Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
@@ -36,8 +62,7 @@ public class Server {
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
-        
+
     }
-    
+
 }

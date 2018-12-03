@@ -4,22 +4,18 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-public class Servidor implements Runnable {
+public class Comunicacao implements Runnable {
 
     private static int numID = 1;
     public final int TAMANHO_CABECALHO = 512;
     public final int TAMANHO_PAYLOAD = 512;
     public final double TAXA_PERDA = 0.0;
-    public static int PORTA_SERVIDOR = 12355;
 
-    private DatagramSocket socketServidor;
+    private DatagramSocket socketComunicacao;
+    private String caminho;
     private byte[] pacoteRecebido;
     private InetAddress ipLocal;
     private Thread t1;
@@ -29,26 +25,11 @@ public class Servidor implements Runnable {
 
     ArrayList<byte[]> partesArquivo = new ArrayList<>();
 
-    public Servidor() throws UnknownHostException {
-
-        try {
-            //ele vai ter que receber um syn na porta 6669, depois vai passar para Classe tratar
-            socketServidor = new DatagramSocket(PORTA_SERVIDOR++);
-            pacoteRecebido = new byte[TAMANHO_CABECALHO + TAMANHO_PAYLOAD];
-            ipLocal = InetAddress.getLocalHost();
-            t1 = new Thread(this);
-            t1.start();
-
-        } catch (SocketException ex) {
-            Logger.getLogger(Servidor.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-
-    public Servidor(Pacote pacote, int port) throws IOException {
+    public Comunicacao(String caminho, Pacote pacote, int port) throws IOException {
         
-        
+        this.caminho = caminho;
         this.portaCliente = port;
-        socketServidor = new DatagramSocket(PORTA_SERVIDOR++);
+        socketComunicacao = new DatagramSocket();
         pacoteRecebido = new byte[TAMANHO_CABECALHO + TAMANHO_PAYLOAD];
         ipLocal = InetAddress.getLocalHost();
 
@@ -61,8 +42,7 @@ public class Servidor implements Runnable {
 
         byte[] ackBytes = Serializer.toBytes(synack);
 
-        
-        
+       
         if (Math.random() > TAXA_PERDA) {
             this.enviarPacote(ackBytes, this.portaCliente);
             System.out.println(synack.toString() + "\n------------------------------------>");
@@ -162,7 +142,7 @@ public class Servidor implements Runnable {
         try {
             DatagramPacket sendPacket;
             sendPacket = new DatagramPacket(pkg, pkg.length, this.ipLocal, portaCliente);
-            socketServidor.send(sendPacket);
+            socketComunicacao.send(sendPacket);
 
         } catch (IOException ex) {
             System.out.println("Não foi possivel enviar o pacote");
@@ -174,7 +154,7 @@ public class Servidor implements Runnable {
         try {
 
             DatagramPacket pacote = new DatagramPacket(pacoteRecebido, pacoteRecebido.length);
-            socketServidor.receive(pacote);
+            socketComunicacao.receive(pacote);
             this.portaCliente = pacote.getPort();
             byte[] pkg = pacote.getData();
 
@@ -188,14 +168,11 @@ public class Servidor implements Runnable {
 
     private void salvarArquivo(String caminho) {
 
-        String caminhoLauro = "src\\arquivo\\";
-
-        caminho = "/home/jose/NetBeansProjects/ClienteTCP1/Lauro/src/arquivo/";
         byte[] arquivo = new byte[this.partesArquivo.size() * 512];
 
         System.out.println(arquivo.length);
 
-        String nome = caminhoLauro + "save-" + this.portaCliente + ".txt";
+        String nome = this.caminho + "save-" + this.portaCliente + ".txt";
         System.out.println(nome);
         File SalvaNoDiretorio = new File(nome);
 
@@ -233,12 +210,4 @@ public class Servidor implements Runnable {
         }
 
     }
-
-   /* public static void main(String[] args) throws Exception {
-
-        Servidor server = new Servidor();
-
-        DatagramSocket servidor = new DatagramSocket(6669);
-
-    }*/
 }

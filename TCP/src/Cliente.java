@@ -18,26 +18,28 @@ public class Cliente {
     public static final int JANELA = 4;
     public static final int TIMEOUT = 500;
 
-    private String caminhoLauro = "src\\arquivo\\teste.txt";
-    private String caminho = "/home/jose/NetBeansProjects/ClienteTCP1/Lauro/src/arquivo/teste.txt";
+    private String caminho;
     private DatagramSocket socketCliente;
     private byte[] resposta = new byte[200];
     private DatagramPacket ack = new DatagramPacket(resposta, resposta.length);
     private ArrayList<Pacote> pacotesEnviados = new ArrayList<Pacote>();
-    private InetAddress ipServidor = InetAddress.getByName("localhost");
+    private InetAddress ipServidor;
     private byte[] arquivo;
     private int seqPacote = 12345;
     private int esperaAck;
     private int ultimoPacote;
     private int count = 0;
     private int connectionID;
-    private int portaServidor=6669;
+    private int portaServidor;
     private Pacote temp;
 
-    public Cliente() throws IOException {
+    public Cliente(InetAddress ipServidor, int porta, String caminho) throws IOException {
 
         try {
 
+            this.portaServidor = porta;
+            this.ipServidor = ipServidor;
+            this.caminho = caminho;
             this.socketCliente = new DatagramSocket();
             this.arquivo = getBytesArquivo();
             this.ultimoPacote = (int) Math.ceil((double) arquivo.length / TAMANHO_PAYLOAD);
@@ -52,7 +54,7 @@ public class Cliente {
 
     public byte[] getBytesArquivo() throws FileNotFoundException, IOException {
 
-        File file = new File(this.caminhoLauro);
+        File file = new File(this.caminho);
         FileInputStream fistream = new FileInputStream(file);
         this.arquivo = new byte[(int) file.length()];
         fistream.read(this.arquivo);
@@ -225,7 +227,12 @@ public class Cliente {
 
     public static void main(String[] args) throws Exception {
 
-        Cliente c = new Cliente();
+        String caminhoLauro = "src\\arquivo\\teste.txt";
+        String caminho = "/home/jose/NetBeansProjects/ClienteTCP1/Lauro/src/arquivo/teste.txt";
+        InetAddress ipServidor = InetAddress.getByName("localhost");
+        int portaServidor = 6669;
+        
+        Cliente c = new Cliente(ipServidor, portaServidor, caminhoLauro);
         c.enviarPacoteSyn();
         c.transferirArquivo();
 
